@@ -46,33 +46,39 @@ def crawl_with_selenium(url, admin, fondo, year, month):
             text = el.text
             title = el.get_attribute("title")
 
-            if href:
+            # Solo conservar enlaces válidos y que apunten a PDF
+            if href and ".pdf" in href.lower():
                 all_links.append({
                     "href": href,
                     "text": text,
                     "title": title
                 })
 
+        if not all_links:
+            print(f" {fondo} ({admin}) - No se encontraron enlaces .pdf en la página")
+            return
+
         links = process_result(all_links, admin, fondo, year, month)
+
         if links:
             best_link = links[-1]
-            print(f" {fondo} ({admin}) - Links encontrados: {len(links)}")
+            print(f" {fondo} ({admin}) - Links PDF encontrados: {len(links)}")
             print("   Mejor opción:", best_link)
 
-            # ----  Descargar con Scraping ----
+            # ---- Descargar con Scraping ----
             scraping = Scraping()
 
             # Construir carpeta: Fichas tecnicas/{admin} {año}/{mes}/
             output_dir = os.path.join("Fichas tecnicas", f"{admin} {year}", month)
 
-            # Nombre de archivo: fondo.pdf (limpiando caracteres peligrosos)
+            # Nombre de archivo: fondo.pdf 
             safe_fondo = "".join(c for c in fondo if c.isalnum() or c in (" ", "_", "-")).rstrip()
             filename = f"{safe_fondo}.pdf"
 
             scraping.download_pdf(best_link, output_dir=output_dir, filename=filename)
 
         else:
-            print(f" {fondo} ({admin}) - No se encontraron links en la página")
+            print(f" {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
 
     except Exception as e:
         print(f" Error en {fondo} ({admin}) - {str(e)}")
@@ -84,7 +90,6 @@ def crawl_with_selenium(url, admin, fondo, year, month):
 def main():
     extraer = LinkExtractor("FICmanual.xlsx")
     resultados = extraer.extract_links()
-    # month, year = extraer.extract_month_year()
 
     month = "agosto"
     year = "2025"
