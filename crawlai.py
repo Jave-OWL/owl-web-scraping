@@ -22,9 +22,8 @@ sys.path.append(parent_dir)
 
 
 ADMINS_ESPECIALES = [
-    "Fiduciaria Bogotá",
-    "Fiduciaria Corficolombiana",
-    "Fiduciaria Occidente",
+    "Progresion",
+    "Banco de Occidente Fiduoccidente"
 ]
 
 
