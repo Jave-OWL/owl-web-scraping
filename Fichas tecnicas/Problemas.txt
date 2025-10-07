@@ -1,2 +1,8 @@
-Fiduoccidente: Adelantar un mes
-Progresion: Adelantar un mes
+Base de datos excel
+
+Servidor para correrlo cada mes 
+
+Admin lo corre cuando quiere
+
+
+
