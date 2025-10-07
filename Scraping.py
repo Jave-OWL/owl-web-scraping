@@ -16,59 +16,7 @@ from selenium.webdriver.common.by import By
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-class Scraping:
-
-    def fetch_content(self):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-        }
-        
-        response = requests.get(self.url, headers=headers, verify=False)
-        
-        if response.status_code == 200:
-            print(f" Acceso exitoso a {self.url}")
-            return response.text
-        else:
-            print(f" Error {response.status_code}: No se pudo acceder a {self.url}")
-            return None
-    '''
-    def parse_links(self, content):
-        soup = BeautifulSoup(content, 'html.parser')
-        links = soup.find_all('a', href=True) + soup.find_all('link', href=True)
-
-        pdf_links = []
-        for link in links:
-            href = link['href'].strip()
-
-            # Convertir enlaces relativos a absolutos
-            absolute_url = urljoin(self.url, href)
-            
-            if absolute_url.lower().endswith('.pdf'):
-                pdf_links.append(absolute_url)
-        
-        return pdf_links'''
-    
-    def get_pdf_links(self):
-        content = self.fetch_content()
-        if content:
-            return self.parse_links(content)
-        else:
-            return []
-        
-    def get_pdf_links(self):
-        content = self.fetch_content()
-        
-        if content:
-            pdf_links = self.parse_links(content)
-            print(f" BeautifulSoup encontró {len(pdf_links)} PDFs.")
-            
-            if len(pdf_links) >= 10:
-                print("Suficientes links con BeautifulSoup.")
-                return pdf_links
-            else:
-                print("Menos de 10 PDFs con BeautifulSoup. Probando con Selenium...")
-        
-        return self.get_pdf_links_selenium()
+class Scraping:    
 
     def download_pdf(self, pdf_url, output_dir='Fichas tecnicas', filename='FichaTecnica.pdf'):
         try:
@@ -101,39 +49,6 @@ class Scraping:
 
         except Exception as e:
             raise Exception(f"Otro error en la descarga: {e}")
-
-
-    def get_pdf_links_selenium(self):
-        # Ruta del Edge WebDriver
-        driver_path = "msedgedriver.exe"
-
-        # Configuración del navegador Edge en modo headless (sin ventana)
-        edge_options = Options()
-        edge_options.add_argument("--headless")  # Opcional, ejecuta en segundo plano
-        edge_options.add_argument("--disable-gpu")  # Evita problemas gráficos
-
-        # Inicializar Edge WebDriver
-        service = Service(driver_path)
-        driver = webdriver.Edge(service=service, options=edge_options)
-
-        # URL objetivo
-        url = self.url
-        driver.get(url)
-
-        # Esperar a que la página cargue completamente
-        driver.implicitly_wait(10)
-
-        # Buscar todos los enlaces <a> con href
-        links = driver.find_elements(By.TAG_NAME, "a")
-
-        # Filtrar solo los enlaces que contienen '.pdf'
-        pdf_links = [link.get_attribute("href") for link in links if link.get_attribute("href") and '.pdf' in link.get_attribute("href").lower()]
-
-        # Cerrar el navegador
-        driver.quit()
-
-        return pdf_links
-
 
 #
 # filtrar links
@@ -434,7 +349,20 @@ class Scraping:
 
 
     
-    def filter_links_with_ai(self, links, admin, fondo, year, month, ficha_tecnica=True):
+    def filter_links_with_ai(self, links, admin, fondo, year, month, ficha_tecnica=True, adelantar = False):
+        if adelantar:
+            meses = [
+                'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+            ]
+            normalized_month = self.normalize_text(month).strip().lower()
+            if normalized_month in meses:
+                idx = meses.index(normalized_month)
+                siguiente_mes = meses[(idx + 1) % 12]
+                month = siguiente_mes
+            else:
+                print(f"Mes '{month}' no reconocido, no se adelanta.")
+        
         cleaned_fondo = self.clean_fund_name_with_admin(admin, fondo)
         print(f'Fondo: {fondo}')
         print(f"Cleaned fund name: {cleaned_fondo}")

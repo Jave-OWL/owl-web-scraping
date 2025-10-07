@@ -20,9 +20,22 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
 
+
+ADMINS_ESPECIALES = [
+    "Fiduciaria Bogotá",
+    "Fiduciaria Corficolombiana",
+    "Fiduciaria Occidente",
+]
+
+
 def process_result(links, admin, fondo, year, month):
     scraping = Scraping()
-    return scraping.filter_links_with_ai(links, admin, fondo, year, month)
+
+    
+    if admin in ADMINS_ESPECIALES:
+        return scraping.filter_links_with_ai(links, admin, fondo, year, month, adelantar=True)
+    else:
+        return scraping.filter_links_with_ai(links, admin, fondo, year, month)
 
 
 def crawl_with_selenium(url, admin, fondo, year, month):
