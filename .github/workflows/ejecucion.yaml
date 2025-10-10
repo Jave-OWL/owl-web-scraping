@@ -1,0 +1,50 @@
+name: Ejecutar scraping mensual y subir PDFs
+
+on:
+  schedule:
+    - cron: "0 8 1 * *"  
+  workflow_dispatch:      
+
+permissions:
+  contents: write          
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias del sistema
+        run: |
+          sudo apt-get update
+          
+          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+          
+          which chromium-browser || which chromium
+
+      - name: Instalar dependencias de Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar script principal
+        env:
+          CHROME_BIN: /usr/bin/chromium-browser
+        run: |
+          cd ScrapingFichas
+          python crawlai.py
+
+      - name: Subir PDFs generados
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add "Fichas tecnicas" || echo "No hay PDFs nuevos"
+          git commit -m " PDFs actualizados automáticamente: $(date -u +%Y-%m-%d)" || echo "Sin cambios para commitear"
+          git push
