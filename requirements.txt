@@ -2,3 +2,8 @@ selenium
 webdriver-manager
 pydantic
 openpyxl
+requests
+beautifulsoup4
+urllib3
+unidecode
+pandas
