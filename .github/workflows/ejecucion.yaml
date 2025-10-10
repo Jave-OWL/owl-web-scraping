@@ -38,7 +38,6 @@ jobs:
         env:
           CHROME_BIN: /usr/bin/chromium-browser
         run: |
-          cd ScrapingFichas
           python crawlai.py
 
       - name: Subir PDFs generados
