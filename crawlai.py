@@ -92,7 +92,7 @@ def get_chrome_options():
         if os.path.exists(chrome_path):
             options.binary_location = chrome_path
         else:
-            print("⚠️ No se encontró Chrome en la ruta esperada, Selenium usará el predeterminado.")
+            print(" No se encontró Chrome en la ruta esperada, Selenium usará el predeterminado.")
     else:
         #  GitHub Actions o Linux
         options.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium-browser")

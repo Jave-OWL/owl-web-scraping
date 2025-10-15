@@ -292,38 +292,33 @@ class Scraping:
             
     def is_fund_match(self, normalized_link, fund_variations):
         """
-        Fund name matching that matches:
-        - Any word from multi-word fund names
-        - Single-word fund names when they appear as complete words or surrounded by numbers
+        Devuelve un puntaje basado en cuántas palabras del fondo hacen match.
+        - 1 punto si al menos una palabra coincide
+        - +0.1 por cada palabra adicional que coincida
         """
+        max_score = 0.0
+
         for variation in fund_variations:
-            # Clean up the variation
             variation = variation.strip()
-            
-            # Extract words from the variation and filter out empty strings
             variation_words = [w for w in variation.split() if w]
-            
-            # For single-word fund names
-            if len(variation_words) == 1:
-                word = variation_words[0]
-                # Match patterns: word alone, or word surrounded by numbers
-                patterns = [
-                    rf'\b{re.escape(word)}\b',  # Exact word match
-                    rf'\d+{re.escape(word)}\b',  # Numbers before
-                    rf'\b{re.escape(word)}\d+',  # Numbers after
-                    rf'\d+{re.escape(word)}\d+'  # Numbers both sides
-                ]
-                if any(re.search(pattern, normalized_link) for pattern in patterns):
-                    return True
-            # For multi-word fund names, match if any complete word is found
-            else:
-                if any(
-                    re.search(rf'\b{re.escape(word)}\b', normalized_link)
-                    for word in variation_words
-                ):
-                    return True
-                    
-        return False
+
+            if not variation_words:
+                continue
+
+            match_count = 0
+
+            for word in variation_words:
+                pattern = rf'\b{re.escape(word)}\b'
+                if re.search(pattern, normalized_link):
+                    match_count += 1
+
+            if match_count > 0:
+                # 1 punto por la primera palabra, +0.1 por cada palabra extra
+                score = 1 + (match_count - 1) * 0.1
+                max_score = max(max_score, score)
+
+        return max_score
+
 
     def remove_uuid_and_random_ids(self, normalized_link):
         """
@@ -401,12 +396,12 @@ class Scraping:
             matches = 0
             match_details = []
 
-            # Fund match
-            fund_match = self.is_fund_match(normalized_link, fund_variations)
-            if fund_match:
-                matches += 1
-                match_details.append("Fund match")
-                print('Fund match')
+            fund_score = self.is_fund_match(normalized_link, fund_variations)
+            if fund_score > 0:
+                matches += fund_score
+                match_details.append(f"Fund match ({fund_score:.1f})")
+                print(f'Fund match ({fund_score:.1f})')
+
 
             # Date match
             date_match_count, date_match_desc = self.find_date_match(normalized_link, month_variations, year_variations)
