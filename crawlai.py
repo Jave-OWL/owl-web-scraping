@@ -146,7 +146,7 @@ def main():
         for admin, fondo, link in resultados:
             crawl_with_selenium(link, admin, fondo, year, month)
     else:
-        print("⚠️ No se encontraron URLs para rastrear")
+        print(" No se encontraron URLs para rastrear")
 
 
 if __name__ == "__main__":

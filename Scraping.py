@@ -398,7 +398,7 @@ class Scraping:
 
             matches = 0
             match_details = []
-
+            
             fund_score = self.is_fund_match(normalized_link, fund_variations)
             if fund_score > 0:
                 matches += fund_score
