@@ -53,7 +53,7 @@ def get_chrome_options():
         if os.path.exists(chrome_path):
             options.binary_location = chrome_path
         else:
-            print("⚠️ No se encontró Chrome en la ruta esperada, Selenium usará el predeterminado.")
+            print(" No se encontró Chrome en la ruta esperada, Selenium usará el predeterminado.")
     else:
         options.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium-browser")
 
@@ -85,7 +85,7 @@ def crawl_with_selenium(url, admin, fondo, year, month):
         driver = webdriver.Chrome(service=Service(driver_path), options=options)
 
     try:
-        print(f"🌐 Intentando abrir: {url}")
+        print(f" Intentando abrir: {url}")
         driver.get(url)
 
         elements = driver.find_elements(By.TAG_NAME, "a")
@@ -99,14 +99,14 @@ def crawl_with_selenium(url, admin, fondo, year, month):
                 all_links.append({"href": href, "text": text, "title": title})
 
         if not all_links:
-            print(f"⚠️ {fondo} ({admin}) - No se encontraron enlaces .pdf en la página")
+            print(f" {fondo} ({admin}) - No se encontraron enlaces .pdf en la página")
             return
 
         links = process_result(all_links, admin, fondo, year, month)
 
         if links:
             best_link = links[-1]
-            print(f"✅ {fondo} ({admin}) - Links PDF encontrados: {len(links)}")
+            print(f" {fondo} ({admin}) - Links PDF encontrados: {len(links)}")
             print("   → Mejor opción:", best_link)
 
             scraping = Scraping()
@@ -117,10 +117,10 @@ def crawl_with_selenium(url, admin, fondo, year, month):
 
             scraping.download_pdf(best_link, output_dir=output_dir, filename=filename)
         else:
-            print(f"ℹ️ {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
+            print(f"ℹ {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
 
     except Exception as e:
-        print(f"❌ Error en {fondo} ({admin}) - {str(e)}")
+        print(f" Error en {fondo} ({admin}) - {str(e)}")
 
     finally:
         driver.quit()
@@ -138,7 +138,7 @@ def main():
 
     print(f" Parámetros recibidos → Mes: {month}, Año: {year}")
 
-    extraer = LinkExtractor("FICmanual.xlsx")
+    extraer = LinkExtractor("fics.json")
     resultados = extraer.extract_links()
 
     if resultados:

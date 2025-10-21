@@ -1,35 +1,20 @@
-import pandas as pd
+import json
 
 class LinkExtractor:
     def __init__(self, file_path):
         self.file_path = file_path
 
     def extract_links(self):
-        df = pd.read_excel(self.file_path, sheet_name="Hoja1", header=None)
-        df.fillna("", inplace=True)
+        # Leer el archivo JSON
+        with open(self.file_path, "r", encoding="utf-8") as f:
+            data_json = json.load(f)
 
-        administradora_actual = ""
         data = []
-
-        for _, row in df.iterrows():
-            admin = str(row.iloc[0]).strip()   # Columna A
-            link = str(row.iloc[1]).strip()    # Columna B
-
-            if admin and not link:
-                # Si hay texto en col A pero col B está vacía -> es un administrador
-                administradora_actual = admin
-
-            elif admin and link:
-                # Si hay texto en col A y link en col B -> es un fondo
-                data.append((administradora_actual, admin, link))
+        # Recorrer cada administradora (clave principal)
+        for administradora, fondos in data_json.items():
+            # fondos es un diccionario {fondo: link}
+            for fondo, link in fondos.items():
+                # Agregamos una tupla (administradora, fondo, link)
+                data.append((administradora, fondo, link))
 
         return data
-
-    def extract_month_year(self):
-        df = pd.read_excel(self.file_path, header=None, sheet_name="Hoja1")
-        df.fillna("", inplace=True)
-
-        mes = str(df.iloc[1, 8]).strip()   # Celda I3 -> fila 2, columna 8
-        año = str(df.iloc[1, 9]).strip()   # Celda J3 -> fila 2, columna 9
-
-        return mes, año
