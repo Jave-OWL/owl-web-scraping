@@ -4,7 +4,12 @@ import platform
 from pydantic import BaseModel
 from Extraer import LinkExtractor
 from Scraping import Scraping
-from playwright.sync_api import sync_playwright
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+
 
 class Url(BaseModel):
     url: str
@@ -31,6 +36,30 @@ def process_result(links, admin, fondo, year, month):
         return scraping.filter_links_with_ai(links, admin, fondo, year, month)
 
 
+def get_chrome_options():
+    """Configura las opciones de Chrome dependiendo del entorno."""
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
+
+    system = platform.system().lower()
+    if system == "windows":
+        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        if not os.path.exists(chrome_path):
+            chrome_path = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+        if os.path.exists(chrome_path):
+            options.binary_location = chrome_path
+        else:
+            print("⚠️ No se encontró Chrome en la ruta esperada, Selenium usará el predeterminado.")
+    else:
+        options.binary_location = os.environ.get("CHROME_BIN", "/usr/bin/chromium-browser")
+
+    return options
+
+
 def create_output_dir(admin, year, month, scraping_instance):
     admin_clean = "".join(c for c in admin if c.isalnum() or c.isspace())
     admin_words = admin_clean.title().split()
@@ -42,91 +71,82 @@ def create_output_dir(admin, year, month, scraping_instance):
 
     output_dir = os.path.join("Fichas tecnicas", f"{admin_formatted}_{year}", month_final)
     os.makedirs(output_dir, exist_ok=True)
+
     return output_dir
 
 
-def crawl_with_playwright(url, admin, fondo, year, month):
-    print(f"Iniciando Playwright para {fondo} ({admin})...")
+def crawl_with_selenium(url, admin, fondo, year, month):
+    options = get_chrome_options()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--window-size=1920,1080"
-            ]
-        )
+    if platform.system().lower() == "windows":
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    else:
+        driver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+        driver = webdriver.Chrome(service=Service(driver_path), options=options)
 
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-            viewport={"width": 1920, "height": 1080}
-        )
+    try:
+        print(f"🌐 Intentando abrir: {url}")
+        driver.get(url)
 
-        page = context.new_page()
+        elements = driver.find_elements(By.TAG_NAME, "a")
 
-        try:
-            print("Intentando abrir:", url)
-            page.goto(url, timeout=60000, wait_until="domcontentloaded")
+        all_links = []
+        for el in elements:
+            href = el.get_attribute("href")
+            text = el.text
+            title = el.get_attribute("title")
+            if href and ".pdf" in href.lower():
+                all_links.append({"href": href, "text": text, "title": title})
 
-            anchors = page.locator("a")
-            all_links = []
-            count = anchors.count()
+        if not all_links:
+            print(f"⚠️ {fondo} ({admin}) - No se encontraron enlaces .pdf en la página")
+            return
 
-            for i in range(count):
-                href = anchors.nth(i).get_attribute("href")
-                text = anchors.nth(i).inner_text() or ""
-                title = anchors.nth(i).get_attribute("title") or ""
-                if href and ".pdf" in href.lower():
-                    all_links.append({"href": href, "text": text, "title": title})
+        links = process_result(all_links, admin, fondo, year, month)
 
-            if not all_links:
-                print(f" {fondo} ({admin}) - No se encontraron enlaces .pdf en la página")
-                return
+        if links:
+            best_link = links[-1]
+            print(f"✅ {fondo} ({admin}) - Links PDF encontrados: {len(links)}")
+            print("   → Mejor opción:", best_link)
 
-            links = process_result(all_links, admin, fondo, year, month)
+            scraping = Scraping()
+            output_dir = create_output_dir(admin, year, month, scraping)
 
-            if links:
-                best_link = links[-1]
-                #print(f" {fondo} ({admin}) - Links PDF encontrados: {len(links)}")
-                print("   Mejor opción:", best_link)
+            safe_fondo = "".join(c for c in fondo if c.isalnum() or c in (" ", "_", "-")).rstrip()
+            filename = f"{safe_fondo}.pdf"
 
-                scraping = Scraping()
-                output_dir = create_output_dir(admin, year, month, scraping)
+            scraping.download_pdf(best_link, output_dir=output_dir, filename=filename)
+        else:
+            print(f"ℹ️ {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
 
-                safe_fondo = "".join(c for c in fondo if c.isalnum() or c in (" ", "_", "-")).rstrip()
-                filename = f"{safe_fondo}.pdf"
+    except Exception as e:
+        print(f"❌ Error en {fondo} ({admin}) - {str(e)}")
 
-                scraping.download_pdf(best_link, output_dir=output_dir, filename=filename)
-            else:
-                print(f" {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
-
-        except Exception as e:
-            print(f" Error en {fondo} ({admin}) - {str(e)}")
-
-        finally:
-            browser.close()
+    finally:
+        driver.quit()
 
 
 def main():
+    # --- Leer argumentos desde la consola ---
+    if len(sys.argv) < 3:
+        print(" Uso: python nombre_archivo.py <mes> <año>")
+        print("   Ejemplo: python crawler.py agosto 2025")
+        sys.exit(1)
+
+    month = sys.argv[1]
+    year = sys.argv[2]
+
+    print(f" Parámetros recibidos → Mes: {month}, Año: {year}")
+
     extraer = LinkExtractor("FICmanual.xlsx")
     resultados = extraer.extract_links()
 
-    month = "agosto"
-    year = "2025"
-
     if resultados:
-        print(f"Se encontraron {len(resultados)} fondos para rastrear")
+        print(f" Se encontraron {len(resultados)} fondos para rastrear")
         for admin, fondo, link in resultados:
-            crawl_with_playwright(link, admin, fondo, year, month)
+            crawl_with_selenium(link, admin, fondo, year, month)
     else:
-        print("No se encontraron URLs para rastrear")
+        print("⚠️ No se encontraron URLs para rastrear")
 
 
 if __name__ == "__main__":
