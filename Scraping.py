@@ -190,7 +190,6 @@ class Scraping:
         return weight
     
     def find_date_match(self, normalized_link, month_variations, year_variations):
-        
         # get individual weights
         month_weight = self.is_month_match(normalized_link, month_variations)
         year_weight = self.is_year_match(normalized_link, year_variations)
@@ -204,20 +203,24 @@ class Scraping:
         if year_weight > 0:
             description_parts.append("Year match")
 
-        # If no direct month/year, try numeric combined patterns
-        if total_weight == 0:
-            numeric_patterns = self.find_numeric_date_patterns(month_variations, year_variations)
-            for pattern in numeric_patterns:
-                if re.search(rf'(^|[^\d])({re.escape(pattern)})($|[^\d])', normalized_link):
-                    total_weight = 3
-                    description_parts = ["Numeric date pattern match"]
-                    break
+        # get numeric patterns
+        numeric_patterns = self.find_numeric_date_patterns(month_variations, year_variations)
+        numeric_match_found = False
+        for pattern in numeric_patterns:
+            if re.search(rf'(^|[^\d])({re.escape(pattern)})($|[^\d])', normalized_link):
+                numeric_match_found = True
+                
+                total_weight += 3  
+                description_parts.append("Numeric date pattern match")
+                break
 
         if total_weight == 0:
             description = "No date match"
         else:
             description = ", ".join(description_parts)
+
         return total_weight, description
+
     
     def get_last_day_of_month(self, month, year):
         
@@ -255,7 +258,7 @@ class Scraping:
             numeric_patterns.extend([
                 f"{month}{year}",          # MMYYYY (122024)
                 f"{year}{month}",          # YYYYMM (202412)
-                f"{last_day}{month}{year}" # DDMMYYYY (31122024)
+                f"{last_day}{month}{year}", # DDMMYYYY (31122024)
                 f"{year}{month}{last_day}" # YYYYMMDD (20241231)
             ])
         
@@ -424,6 +427,6 @@ class Scraping:
             if matches >= max_matches:
                 max_matches = matches
                 filtered_links.append(href)
-                print(f'Peso:{matches}')
+                print(f'-----Peso:{matches}')
 
         return filtered_links
