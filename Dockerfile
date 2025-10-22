@@ -40,5 +40,8 @@ RUN pip install --no-cache-dir \
     fake-useragent \
     html5lib
 
+# Desactivar buffering de salida de Python
+ENV PYTHONUNBUFFERED=1
+
 # Comando por defecto (ajusta el nombre de tu script)
 ENTRYPOINT ["python", "crawlai.py"]
