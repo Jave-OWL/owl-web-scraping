@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
-
+from itau_scraper import get_itau_links
 
 class Url(BaseModel):
     url: str
@@ -27,12 +27,6 @@ ADMINS_ESPECIALES = [
     # "Banco de Occidente Fiduoccidente"
 ]
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-import time
-import os
-
 def process_result(links, admin, fondo, year, month):
     scraping = Scraping()
     if admin in ADMINS_ESPECIALES:
@@ -44,6 +38,11 @@ def process_result(links, admin, fondo, year, month):
 def get_chrome_options():
     """Configura las opciones de Chrome dependiendo del entorno."""
     options = Options()
+    
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-infobars")    
+    options.add_argument("--start-maximized")    
+    options.add_argument("--no-sandbox")            
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
@@ -81,7 +80,17 @@ def create_output_dir(admin, year, month, scraping_instance):
 
 
 def crawl_with_selenium(url, admin, fondo, year, month):
+    # Si el admin es Itau, no usar headless
+    headless_mode = admin.lower().strip() != "itau"
     options = get_chrome_options()
+
+    if not headless_mode:
+        print(" Ejecutando sin modo headless (Itau detectado).")
+        # Eliminar argumento headless si existe
+        try:
+            options.arguments.remove("--headless=new")
+        except ValueError:
+            pass
 
     if platform.system().lower() == "windows":
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -91,17 +100,25 @@ def crawl_with_selenium(url, admin, fondo, year, month):
 
     try:
         print(f" Intentando abrir: {url}")
-        driver.get(url)       
+        driver.get(url)                
         
         elements = driver.find_elements(By.TAG_NAME, "a")
 
         all_links = []
-        for el in elements:
-            href = el.get_attribute("href")
-            text = el.text
-            title = el.get_attribute("title")
-            if href and ".pdf" in href.lower():
-                all_links.append({"href": href, "text": text, "title": title})
+
+        if admin.lower().strip() == "itau":
+            print("[INFO] Activando scraper especial para Itau...")
+            itau_links = get_itau_links(url)
+            for href in itau_links:
+                all_links.append({"href": href, "text": "Fichas técnicas Itau", "title": "Ficha Itau"})
+        else:
+            elements = driver.find_elements(By.TAG_NAME, "a")
+            for el in elements:
+                href = el.get_attribute("href")
+                text = el.text
+                title = el.get_attribute("title")
+                if href and ".pdf" in href.lower():
+                    all_links.append({"href": href, "text": text, "title": title})
 
         if not all_links:
             print(f" {fondo} ({admin}) - No se encontraron enlaces .pdf en la página")
@@ -129,7 +146,6 @@ def crawl_with_selenium(url, admin, fondo, year, month):
 
     finally:
         driver.quit()
-
 
 def main():
     # --- Leer argumentos desde la consola ---
