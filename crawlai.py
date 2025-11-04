@@ -27,6 +27,131 @@ ADMINS_ESPECIALES = [
     # "Banco de Occidente Fiduoccidente"
 ]
 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+import time
+import os
+
+def expandir_acordeon_documentacion(driver):
+    """Expande el acordeón 'Documentación' dentro del Shadow DOM del iframe BBVA."""
+    try:
+        print(" Buscando acordeón de 'Documentación' dentro del shadow DOM...")
+        driver.execute_script("""
+        const getDeepShadow = (root, selectors) => {
+        let el = root;
+        for (const sel of selectors) {
+        el = el.shadowRoot ? el.shadowRoot.querySelector(sel) : el.querySelector(sel);
+        if (!el) return null;
+        }
+        return el;
+        };
+
+        ```
+                // Navegar hasta el accordion de Documentación
+                const page = document.querySelector('fichaco-page');
+                const info = page.shadowRoot.querySelector('fichaco-info');
+                const main = info.shadowRoot.querySelector('main');
+                const accordion = main.querySelector('accordion-component');
+                const titulo = accordion.shadowRoot.querySelectorAll('div.accordion-titulo');
+
+                // Buscar el acordeón que diga 'Documentación'
+                let target = null;
+                titulo.forEach(t => {
+                    if (t.textContent.toLowerCase().includes('documentación')) target = t;
+                });
+
+                if (target) {
+                    const btn = target.querySelector('bbva-button-action');
+                    if (btn) btn.click();
+                    return true;
+                } else {
+                    return false;
+                }
+            """)
+        print(" ✅ Acordeón 'Documentación' expandido correctamente.")
+        time.sleep(2)
+        return True
+    except Exception as e:
+        print(f" ⚠️ Error expandiendo el acordeón 'Documentación': {e}")
+        return False
+
+def handle_bbva_case(driver, fondo, admin, year, month):
+    """Manejo especial para fondos BBVA con shadow DOM e iframe."""
+    print(f" {fondo} ({admin}) - Iniciando caso especial BBVA con Shadow DOM...")
+
+    wait = WebDriverWait(driver, 30)
+    scraping = Scraping()
+
+    try:
+        # --- Esperar el iframe ---
+        print(" Esperando iframe del fondo...")
+        wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, "iframeIsin")))
+        print(" ✅ Cambiado al iframe principal.")
+
+        # --- Esperar el host del shadow root ---
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "fichaco-page")))
+        print(" Esperando el host del shadow DOM (<fichaco-page>)...")
+
+        # --- Expandir el acordeón de 'Documentación' ---
+        if not expandir_acordeon_documentacion(driver):
+            print(" ⚠️ No se pudo expandir el acordeón de 'Documentación'.")
+            return
+
+        time.sleep(3)
+
+        # --- Buscar y hacer clic en “Ficha técnica (fecha)” ---
+        print(" Buscando botón 'Ficha técnica' dentro del shadow DOM...")
+        clicked = driver.execute_script("""
+            const page = document.querySelector('fichaco-page');
+            const info = page.shadowRoot.querySelector('fichaco-info');
+            const main = info.shadowRoot.querySelector('main');
+            const accordion = main.querySelector('accordion-component');
+            const content = accordion.shadowRoot.querySelector('div.accordion-contenido');
+            const blocks = content.querySelectorAll('div.icono-documento');
+            let clicked = false;
+
+            blocks.forEach(block => {
+                if (block.textContent.toLowerCase().includes('ficha técnica')) {
+                    const btn = block.querySelector('bbva-button-action');
+                    if (btn) {
+                        btn.click();
+                        clicked = true;
+                    }
+                }
+            });
+            return clicked;
+        """)
+
+        if clicked:
+            print(" ✅ Click en 'Ficha técnica' realizado correctamente.")
+        else:
+            print(" ⚠️ No se encontró el botón 'Ficha técnica' para hacer clic.")
+            return
+
+        # --- Esperar y detectar el PDF ---
+        print(" Esperando apertura/redirección al PDF...")
+        time.sleep(5)
+        pdf_url = driver.current_url
+
+        if pdf_url.lower().endswith(".pdf"):
+            print(f" ✅ PDF detectado: {pdf_url}")
+            output_dir = create_output_dir(admin, year, month, scraping)
+            safe_fondo = "".join(c for c in fondo if c.isalnum() or c in (" ", "_", "-")).rstrip()
+            filename = f"{safe_fondo}.pdf"
+            scraping.download_pdf(pdf_url, output_dir=output_dir, filename=filename)
+        else:
+            print(" ⚠️ No se detectó una URL directa al PDF. Verifica si se abre en nueva pestaña.")
+
+    except Exception as e:
+        print(f" ⚠️ Error manejando caso especial BBVA en {fondo}: {type(e).__name__} - {e}")
+    finally:
+        # Volver al contexto principal
+        try:
+            driver.switch_to.default_content()
+        except:
+            pass
+
 
 def process_result(links, admin, fondo, year, month):
     scraping = Scraping()
@@ -88,6 +213,10 @@ def crawl_with_selenium(url, admin, fondo, year, month):
         print(f" Intentando abrir: {url}")
         driver.get(url)
 
+        if "bbva" in admin.lower():
+            handle_bbva_case(driver, admin, fondo, year, month)
+            return
+        
         elements = driver.find_elements(By.TAG_NAME, "a")
 
         all_links = []
@@ -117,7 +246,7 @@ def crawl_with_selenium(url, admin, fondo, year, month):
 
             scraping.download_pdf(best_link, output_dir=output_dir, filename=filename)
         else:
-            print(f"ℹ {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
+            print(f" {fondo} ({admin}) - No se encontraron links PDF válidos tras el filtrado AI")
 
     except Exception as e:
         print(f" Error en {fondo} ({admin}) - {str(e)}")
@@ -138,7 +267,7 @@ def main():
 
     print(f" Parámetros recibidos → Mes: {month}, Año: {year}")
 
-    extraer = LinkExtractor("fics.json")
+    extraer = LinkExtractor("bbva.json")
     resultados = extraer.extract_links()
 
     if resultados:

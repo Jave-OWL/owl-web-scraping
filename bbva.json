@@ -1,0 +1,13 @@
+{
+  "bbva": {
+    "digital": "https://www.bbvaassetmanagement.com/co/fondos/?BBVFDIGCB/Fondo-de-Inversión-Colectiva-Abierto-FONDO-BBVA-DIGITAL",
+    "paramo": "https://www.bbvaassetmanagement.com/co/fondos/?CCAFPARCB/Fondo-de-Inversión-Colectivo-Abierto-BBVA-Páramo",
+    "efectivo": "https://www.bbvaassetmanagement.com/co/fondos/?BBVEFEACB/FIC-ABIERTO-BBVA-EFECTIVO-CON-PARTICIPACIONES-DIFERENCIALES",
+    "fam": "https://www.bbvaassetmanagement.com/co/fondos/?BBVFAMACB/FIC-ABIERTO-BBVA-FAM-CON-PARTICIPACIONES-DIFERENCIALES",
+    "plazo30": "https://www.bbvaassetmanagement.com/co/fondos/?FCEFONPLCB/Fondo-de-Inversión-Colectiva-Abierto-con-Pacto-de-Permanencia-BBVA-Plazo-30",
+    "multiestrategia Equilibrio": "https://www.bbvaassetmanagement.com/co/fondos/?CCAFPQ0CB/Fondo-de-Inversión-Colectiva-Abierto-con-pacto-de-permanencia-Multiestrategia-Equilibrio",
+    "multiestrategia Estable": "https://www.bbvaassetmanagement.com/co/fondos/?CCAFPE0CB/Fondo-de-Inversión-Colectiva-Abierto-con-pacto-de-permanencia-Multiestrategia-Estable",
+    "multiestrategia Crecimiento": "https://www.bbvaassetmanagement.com/co/fondos/?CCAFPC0CB/Fondo-de-Inversión-Colectiva-Abierto-con-pacto-de-permanencia-Multiestrategia-Crecimiento",
+    "balanceado Global": "https://www.bbvaassetmanagement.com/co/fondos/?CCAFPLBCB/FONDO-DE-INVERSIÓN-COLECTIVA-BBVA-AM-ESTRATEGIA-BALANCEADO-GLOBAL"
+  }
+}
