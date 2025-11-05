@@ -26,19 +26,19 @@ def get_itau_links(url: str):
             (By.XPATH, "//a[contains(@title, 'Fichas técnicas')]")
         ))
         driver.execute_script("arguments[0].scrollIntoView(true);", fichas_link)
-        time.sleep(1)
+        
         driver.execute_script("arguments[0].click();", fichas_link)
-        time.sleep(4)
+        
 
         def extraer_enlaces_actuales():
             soup = BeautifulSoup(driver.page_source, "html.parser")
             enlaces = []
             for a in soup.find_all("a", href=True):
                 href = a["href"]
-                if "acciones" in href:
-                    if href.startswith("/"):
-                        href = "https://banco.itau.co" + href
-                    enlaces.append(href)
+                
+                if href.startswith("/"):
+                    href = "https://banco.itau.co" + href
+                enlaces.append(href)
             return enlaces
 
         # Extraer los de la primera página
@@ -52,7 +52,7 @@ def get_itau_links(url: str):
                 ))
                 driver.execute_script("arguments[0].scrollIntoView(true);", siguiente_btn)
                 driver.execute_script("arguments[0].click();", siguiente_btn)
-                time.sleep(2)
+                
                 nuevos = extraer_enlaces_actuales()
                 nuevos_enlaces = [e for e in nuevos if e not in todos_los_enlaces]
                 if nuevos_enlaces:

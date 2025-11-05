@@ -8,4 +8,3 @@ unidecode
 lxml
 html5lib
 fake-useragent
-
